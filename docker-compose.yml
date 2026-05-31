@@ -1,9 +1,32 @@
-version: '3'
+version: '3.8'
+
 services:
-  chatgpt-telegram-bot:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      - .:/app
-    restart: unless-stopped
+  # Наш прокси-переводчик
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    ports:
+      - "4000:4000"
+    command: [
+      "--model", "openai/gpt-3.5-turbo",                  # Что будет ждать бот
+      "--drop_params"
+    ]
+    environment:
+      - OPENAI_API_KEY=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                  # Твой ключ gsk_...
+      - OPENAI_API_BASE=https://api.groq.com/openai/v1                # Твой URL https://api.groq.com/...
+    restart: always
+
+  # Твой капризный бот
+  bot:
+    build: .
+    depends_on:
+      - litellm
+    restart: always
+    environment:
+      - TELEGRAM_BOT_TOKEN=8959635652:AAEnWLZlvnXatUX-feAogk2rvvGnMjkCHzU
+      - ALLOWED_TELEGRAM_USER_IDS=1458780967
+      - ADMIN_USER_IDS=1458780967
+      - PORT=${PORT}
+      # Направляем бота не в интернет, а на наш локальный litellm
+      - OPENAI_BASE_URL=http://litellm:4000/v1
+      - OPENAI_MODEL=gpt-3.5-turbo
+      - TARGET_MODEL=gpt-3.5-turbo
